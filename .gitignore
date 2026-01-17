@@ -33,3 +33,11 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Data directories (session data, embeddings, etc.)
+data/
+outputs/
+
+# Neo4j data (managed by Docker)
+neo4j_data/
+neo4j_logs/
