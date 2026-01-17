@@ -12,7 +12,6 @@ if ([string]::IsNullOrWhiteSpace($ollamaHost)) {
 
 $models = @(
     'llama3.1:8b-instruct-q4_K_M'
-    'mistral-nemo:12b-instruct-q4_K_M'
     'qwen2.5:7b-instruct-q4_K_M'
     'gemma2:9b-instruct-q4_K_M'
     'phi3.5:3.8b-mini-instruct-q4_K_M'
