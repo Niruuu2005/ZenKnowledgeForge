@@ -9,7 +9,10 @@ import sys
 from pathlib import Path
 
 # Add repository root to path so 'src' package can be found
-repo_root = Path(__file__).parent.parent.parent
+# Navigate up from tests/integration/ to repo root
+repo_root = Path(__file__).resolve().parent.parent.parent
+if not (repo_root / "src").exists():
+    raise RuntimeError(f"Could not find src directory. Expected at: {repo_root / 'src'}")
 sys.path.insert(0, str(repo_root))
 
 def test_imports():
