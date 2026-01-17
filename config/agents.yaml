@@ -12,8 +12,8 @@ agents:
     
   planner:
     name: "Planner"
-    model: "mistral-nemo:12b-instruct-q4_K_M"
-    vram_mb: 7500
+    model: "mistral:7b-instruct"
+    vram_mb: 4500
     role: "Decompose into research questions and create execution phases"
     max_research_questions: 5
     temperature: 0.4
