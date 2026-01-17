@@ -1,0 +1,34 @@
+# Hardware Constraints Configuration
+# Based on NVIDIA RTX 3050 6GB VRAM, 16GB RAM
+
+hardware:
+  gpu:
+    name: "NVIDIA RTX 3050"
+    vram_mb: 6144
+    # Maximum VRAM for models (leaving headroom for system)
+    max_model_vram_mb: 5500
+    
+  cpu:
+    ram_mb: 16384
+    # Maximum RAM for models that spill over VRAM
+    max_model_ram_mb: 12000
+    
+  constraints:
+    # Critical: Only one model at a time
+    max_concurrent_models: 1
+    # Force model unload after use
+    ollama_keep_alive: 0
+    # Model swap timeout
+    model_swap_timeout_seconds: 30
+    # Max retries for model loading
+    model_load_retries: 3
+    
+  performance:
+    # Browser automation limits
+    max_concurrent_browser_tabs: 5
+    # Research timeout per question
+    research_timeout_seconds: 60
+    # Embedding batch size
+    embedding_batch_size: 32
+    # Max context tokens (conservative for 6GB VRAM)
+    max_context_tokens: 4096

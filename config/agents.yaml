@@ -1,0 +1,75 @@
+# Agent Model Configurations
+# Each agent specifies its model, resource requirements, and role
+
+agents:
+  interpreter:
+    name: "Interpreter"
+    model: "llama3.1:8b-instruct-q4_K_M"
+    vram_mb: 5000
+    role: "Parse user brief, extract intent, generate clarifying questions"
+    max_questions: 5
+    temperature: 0.3
+    
+  planner:
+    name: "Planner"
+    model: "mistral-nemo:12b-instruct-q4_K_M"
+    vram_mb: 7500
+    role: "Decompose into research questions and create execution phases"
+    max_research_questions: 5
+    temperature: 0.4
+    
+  grounder:
+    name: "Grounder"
+    model: "qwen2.5:7b-instruct-q4_K_M"
+    vram_mb: 4500
+    role: "RAG retrieval, evidence citation, confidence scoring"
+    temperature: 0.2
+    max_sources: 10
+    
+  auditor:
+    name: "Auditor"
+    model: "gemma2:9b-instruct-q4_K_M"
+    vram_mb: 5500
+    role: "Risk analysis, security assessment, dependency checking"
+    temperature: 0.3
+    
+  visualizer:
+    name: "Visualizer"
+    model: "phi3.5:3.8b-mini-instruct-q4_K_M"
+    vram_mb: 2500
+    role: "Generate image and chart specifications"
+    temperature: 0.5
+    
+  judge:
+    name: "Judge"
+    model: "qwen2.5:14b-instruct-q4_K_M"
+    vram_mb: 9000
+    role: "Final synthesis, conflict resolution, consensus scoring"
+    temperature: 0.2
+    consensus_threshold: 0.85
+    max_deliberation_rounds: 7
+
+# Pipeline Configurations
+pipelines:
+  research:
+    steps:
+      - agent: interpreter
+      - agent: planner
+      - agent: grounder
+      - agent: auditor
+      - agent: judge
+        
+  project:
+    steps:
+      - agent: interpreter
+      - agent: planner
+      - agent: auditor
+      - agent: visualizer
+      - agent: judge
+        
+  learn:
+    steps:
+      - agent: interpreter
+      - agent: planner
+      - agent: grounder
+      - agent: judge
