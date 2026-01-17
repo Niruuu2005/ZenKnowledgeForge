@@ -142,6 +142,13 @@ class PipelineEngine:
                 # Execute agent
                 agent_output = agent.think(state, self.model_manager)
                 
+                # Validate agent output
+                if not agent_output or (isinstance(agent_output, dict) and len(agent_output) == 0):
+                    logger.warning(
+                        f"Agent {agent_name} produced empty output. "
+                        f"This may cause issues for downstream agents."
+                    )
+                
                 # Update state with agent output
                 state.add_agent_output(agent_name, agent_output)
                 

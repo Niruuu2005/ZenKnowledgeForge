@@ -219,14 +219,28 @@ class ModelManager:
                         )
                         return True
                     else:
-                        logger.warning(
+                        error_msg = (
                             f"Failed to load model {model_name}: "
                             f"Status {response.status_code} (attempt {attempt + 1})"
                         )
+                        if response.status_code == 404:
+                            error_msg += (
+                                f"\n  → Model not found. This usually means:"
+                                f"\n    1. Ollama service is not running - run: docker-compose up -d"
+                                f"\n    2. Model '{model_name}' is not downloaded - run: bash scripts/pull_models.sh"
+                            )
+                        logger.warning(error_msg)
                         
                 except httpx.TimeoutException:
                     logger.warning(
                         f"Timeout loading model {model_name} (attempt {attempt + 1})"
+                        f"\n  → Check if Ollama service is running: docker-compose up -d"
+                    )
+                    
+                except httpx.ConnectError as e:
+                    logger.error(
+                        f"Cannot connect to Ollama at {self.ollama_base_url} (attempt {attempt + 1})"
+                        f"\n  → Ollama service is not running. Start it with: docker-compose up -d"
                     )
                     
                 except Exception as e:
@@ -239,7 +253,11 @@ class ModelManager:
                     time.sleep(2 ** attempt)  # Exponential backoff
             
             raise RuntimeError(
-                f"Failed to load model {model_name} after {self.max_retries} attempts"
+                f"Failed to load model {model_name} after {self.max_retries} attempts. "
+                f"Please check:\n"
+                f"  1. Is Ollama running? → docker-compose up -d\n"
+                f"  2. Is model downloaded? → bash scripts/pull_models.sh\n"
+                f"  3. Can you access {self.ollama_base_url}?"
             )
     
     def generate(
