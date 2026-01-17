@@ -43,9 +43,11 @@ class TestErrorMessageImprovements:
     @patch('src.orchestration.model_manager.httpx.Client')
     def test_connection_error_message(self, mock_client):
         """Test that connection errors include helpful guidance."""
-        # Setup mock to raise ConnectError
+        # Setup mock to raise ConnectError with proper signature
         mock_http_instance = Mock()
-        mock_http_instance.post.side_effect = httpx.ConnectError("Connection refused")
+        # httpx.ConnectError requires a message parameter
+        connect_error = httpx.ConnectError("Connection refused")
+        mock_http_instance.post.side_effect = connect_error
         mock_client.return_value = mock_http_instance
         
         manager = ModelManager(max_retries=1)  # Only 1 retry for faster test
