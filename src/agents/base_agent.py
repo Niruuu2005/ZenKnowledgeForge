@@ -189,6 +189,14 @@ class BaseAgent(ABC):
                 logger.error(
                     f"{self.name} error during generation (attempt {attempt + 1}): {e}"
                 )
+                logger.error(f"  Model: {self.model_name}")
+                logger.error(f"  VRAM required: {self.vram_mb}MB")
+                
+                # Provide helpful context for RuntimeError (model loading failures)
+                if isinstance(e, RuntimeError) and "Failed to load model" in str(e):
+                    logger.error("  This is likely a model availability issue.")
+                    logger.error("  Check: Is Ollama running? → docker-compose up -d")
+                    logger.error("  Check: Are models downloaded? → bash scripts/pull_models.sh")
                 
                 if attempt == self.max_retries - 1:
                     raise
