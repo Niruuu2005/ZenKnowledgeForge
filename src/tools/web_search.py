@@ -283,17 +283,27 @@ class CachedWebSearch(WebSearchTool):
             age_days = (time.time() - cache_file.stat().st_mtime) / 86400
             
             if age_days < self.cache_ttl_days:
-                logger.info(f"Using cached results for: {query} (age: {age_days:.1f} days)")
                 with open(cache_file, 'rb') as f:
-                    return self.pickle.load(f)
+                    cached_results = self.pickle.load(f)
+                
+                # Validate cache - don't use empty results cached within 1 hour
+                if len(cached_results) == 0 and age_days < (1/24):
+                    logger.warning(f"Empty cache within 1 hour for: {query}, forcing fresh search")
+                    cache_file.unlink()  # Delete bad cache
+                else:
+                    logger.info(f"Using cached results for: {query} (age: {age_days:.1f} days, {len(cached_results)} results)")
+                    return cached_results
         
         # Fetch fresh results
+        logger.info(f"Fetching fresh results for: {query}")
         results = super().search(query, max_results, **kwargs)
         
-        # Save to cache
-        with open(cache_file, 'wb') as f:
-            self.pickle.dump(results, f)
-        
-        logger.info(f"Cached {len(results)} results for: {query}")
+        # Only cache non-empty results
+        if len(results) > 0:
+            with open(cache_file, 'wb') as f:
+                self.pickle.dump(results, f)
+            logger.info(f"Cached {len(results)} results for: {query}")
+        else:
+            logger.warning(f"Not caching empty results for: {query}")
         
         return results

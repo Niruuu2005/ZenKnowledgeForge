@@ -175,8 +175,12 @@ class GrounderAgent(BaseAgent):
             ]
         
         # *** NEW: Retrieve evidence for all questions ***
-        logger.info("Retrieving evidence for research questions...")
+        logger.info(f"Retrieving evidence for {len(all_research_questions)} research questions...")
         all_evidence = self._retrieve_evidence(all_research_questions)
+        
+        # Log retrieval summary
+        total_sources = sum(len(sources) for sources in all_evidence.values())
+        logger.info(f"Retrieved total of {total_sources} evidence sources across all questions")
         
         # Store evidence in state for later use
         if not hasattr(state, 'evidence'):
@@ -239,6 +243,9 @@ Every claim should be substantiated with citations or reasoning.
             prompt += f"\n## Retrieved Evidence\n"
             prompt += "\n".join(evidence_sections)
             prompt += "\n"
+            logger.info(f"Prompt includes {len(evidence_sections)} evidence sections with {total_sources} total sources")
+        else:
+            logger.warning("No evidence retrieved - output may lack citations")
         
         prompt += f"""## Content Requirements
 
