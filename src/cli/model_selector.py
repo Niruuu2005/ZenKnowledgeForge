@@ -96,14 +96,14 @@ def select_model_interactive(ollama_url: str = "http://localhost:11434") -> Opti
     models = get_available_models(ollama_url)
     
     if not models:
-        print("\n⚠ No models found in Ollama.")
+        print("\n[!] No models found in Ollama.")
         print("Please download models first using: bash scripts/pull_models.sh")
         return None
     
     # Display menu
     display_model_menu(models)
     
-    print("\n💡 Recommendation: Choose a 7B model (balanced speed/quality)")
+    print("\n[*] Recommendation: Choose a 7B model (balanced speed/quality)")
     print("   Examples: qwen2.5:7b, mistral:7b, llama3.1:8b")
     print()
     
@@ -122,7 +122,7 @@ def select_model_interactive(ollama_url: str = "http://localhost:11434") -> Opti
                 selected_model = models[idx - 1]['name']
                 
                 # Confirm selection
-                print(f"\n✓ Selected: {selected_model}")
+                print(f"\n[OK] Selected: {selected_model}")
                 confirm = input("Continue with this model? [Y/n]: ").strip().lower()
                 
                 if confirm in ['', 'y', 'yes']:

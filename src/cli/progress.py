@@ -100,7 +100,7 @@ class ProgressUI:
             print()
             return
         
-        self.console.print(f"\n[bold green]✓[/bold green] {agent_name} completed")
+        self.console.print(f"\n[bold green][OK][/bold green] {agent_name} completed")
         
         # Show key information based on agent
         if agent_name == "Interpreter" and "intent" in output:
@@ -156,7 +156,7 @@ class ProgressUI:
         
         self.console.print("\n")
         self.console.print(Panel(
-            "[bold green]✓ Artifact Generated Successfully[/bold green]",
+            "[bold green][OK] Artifact Generated Successfully[/bold green]",
             style="green"
         ))
         
@@ -180,7 +180,7 @@ class ProgressUI:
             print(f"ERROR: {message}")
             return
         
-        self.console.print(f"\n[bold red]✗ Error:[/bold red] {message}")
+        self.console.print(f"\n[bold red][X] Error:[/bold red] {message}")
     
     def show_warning(self, message: str):
         """
@@ -193,4 +193,4 @@ class ProgressUI:
             print(f"WARNING: {message}")
             return
         
-        self.console.print(f"[bold yellow]⚠ Warning:[/bold yellow] {message}")
+        self.console.print(f"[bold yellow][!] Warning:[/bold yellow] {message}")

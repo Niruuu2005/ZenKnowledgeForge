@@ -57,7 +57,7 @@ class ProgressTracker:
             })
             
             self.current_agent_index += 1
-            self._print_progress(f"✓ Complete ({duration:.1f}s)")
+            self._print_progress(f"[OK] Complete ({duration:.1f}s)")
     
     def _print_progress(self, status: str):
         """Print formatted progress update"""

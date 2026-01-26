@@ -199,22 +199,22 @@ class ModelManager:
                     logger.warning("Failed to cleanly unload previous model")
                 
                 # Give Ollama time to free VRAM
-                print("   ⏳ Step 1/3: Freeing VRAM...")
+                print("   [*] Step 1/3: Freeing VRAM...")
                 time.sleep(2)
-                print("   ✓ VRAM freed")
+                print("   [OK] VRAM freed")
             
             # Load the new model
             logger.info(f"Loading model: {model_name} for agent: {agent_name}")
-            print(f"\n🔄 Loading Model: {model_name}")
+            print(f"\n[>>] Loading Model: {model_name}")
             print(f"   Agent: {agent_name}")
             
             for attempt in range(self.max_retries):
                 try:
-                    print(f"   ⏳ Step 2/3: Allocating resources (attempt {attempt + 1})...")
+                    print(f"   [*] Step 2/3: Allocating resources (attempt {attempt + 1})...")
                     start_time = time.time()
                     
                     # Make a test request to load the model
-                    print("   ⏳ Step 3/3: Initializing model...")
+                    print("   [*] Step 3/3: Initializing model...")
                     response = self._client.post(
                         f"{self.ollama_base_url}/api/generate",
                         json={
@@ -235,7 +235,7 @@ class ModelManager:
                             loaded_at=datetime.now(),
                             agent_name=agent_name
                         )
-                        print(f"   ✅ Model loaded successfully in {elapsed:.1f}s!")
+                        print(f"   [OK] Model loaded successfully in {elapsed:.1f}s!")
                         logger.info(
                             f"Model {model_name} loaded successfully "
                             f"in {elapsed:.1f}s (attempt {attempt + 1})"

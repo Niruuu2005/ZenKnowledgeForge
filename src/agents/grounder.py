@@ -51,8 +51,12 @@ class GrounderAgent(BaseAgent):
         # NEW: Initialize retrieval tools
         logger.info("Initializing Grounder retrieval tools...")
         try:
+            logger.info("Creating VectorStore instance...")
             self.vector_store = VectorStore(persist_dir="./chroma_db")
             logger.info(f"Vector store initialized: {self.vector_store.get_statistics()}")
+        except KeyboardInterrupt:
+            logger.error("KeyboardInterrupt during VectorStore initialization!")
+            raise
         except Exception as e:
             logger.warning(f"Vector store initialization failed: {e}. Proceeding without vector search.")
             self.vector_store = None

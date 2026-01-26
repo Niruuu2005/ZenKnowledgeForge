@@ -43,7 +43,7 @@ def _run_preflight_checks(ui, config_loader) -> bool:
     import urllib.request
     import urllib.error
     
-    print("\n🔍 Running pre-flight checks...")
+    print("\n[*] Running pre-flight checks...")
     
     # Check Ollama connectivity
     ollama_url = config_loader.get_ollama_base_url()
@@ -52,21 +52,21 @@ def _run_preflight_checks(ui, config_loader) -> bool:
         req = urllib.request.Request(f"{ollama_url}/api/tags", method='GET')
         with urllib.request.urlopen(req, timeout=5) as response:
             if response.status == 200:
-                print("  ✓ Ollama service is running")
+                print("  [OK] Ollama service is running")
                 
                 # Check if models are available
                 import json
                 data = json.loads(response.read())
                 
                 if 'models' in data and len(data['models']) > 0:
-                    print(f"  ✓ Found {len(data['models'])} models")
+                    print(f"  [OK] Found {len(data['models'])} models")
                 else:
-                    print("  ⚠ No models found - first run may be slow")
+                    print("  [!] No models found - first run may be slow")
                     print("    Tip: Run 'bash scripts/pull_models.sh' to download models")
                 
                 return True
     except urllib.error.URLError as e:
-        print(f"  ✗ Cannot connect to Ollama at {ollama_url}")
+        print(f"  [X] Cannot connect to Ollama at {ollama_url}")
         print(f"    Error: {e.reason}")
         print("\n  Fix:")
         print("    1. Start Docker Desktop")
@@ -74,7 +74,7 @@ def _run_preflight_checks(ui, config_loader) -> bool:
         print("    3. Wait ~30 seconds for Ollama to start")
         return False
     except Exception as e:
-        print(f"  ✗ Unexpected error checking Ollama: {e}")
+        print(f"  [X] Unexpected error checking Ollama: {e}\")")
         return False
 
 
@@ -131,7 +131,7 @@ def main():
                 "Output Dir": args.output_dir or config_loader.get_output_dir(),
                 "Log Level": log_level
             })
-            print("\n✓ Configuration valid")
+            print("\n[OK] Configuration valid")
             return 0
         
         # Pre-flight checks
@@ -147,17 +147,17 @@ def main():
         if args.single_model:
             from .cli.model_selector import select_model_interactive
             
-            print("\n🚀 SINGLE MODEL MODE - Faster execution, no model swapping")
+            print("\\n[>>] SINGLE MODEL MODE - Faster execution, no model swapping")
             print("   All agents will use the same model.")
             print()
             
             single_model_name = select_model_interactive(config_loader.get_ollama_base_url())
             
             if not single_model_name:
-                print("\n❌ No model selected. Exiting.")
+                print("\\n[X] No model selected. Exiting.")
                 return 1
             
-            print(f"\n✓ Using {single_model_name} for all agents")
+            print(f"\\n[OK] Using {single_model_name} for all agents")
             print("   Expected execution time: 8-12 minutes (vs 15-25 with swapping)\n")
         
         # Fast mode - automatically use smallest model
