@@ -61,34 +61,67 @@ class GrounderAgent(BaseAgent):
         Returns:
             Formatted prompt
         """
-        # For now, we'll simulate retrieved content
-        # In a full implementation, this would call the browser/search tools
-        
-        # Get the first research question from the plan
-        research_question = "What is the topic?"
+        # Get ALL research questions from the plan
+        all_research_questions = []
         if state.plan and "research_questions" in state.plan:
-            rqs = state.plan["research_questions"]
-            if rqs:
-                research_question = rqs[0].get("question", research_question)
+            all_research_questions = state.plan["research_questions"]
         
-        # Prepare input JSON
-        input_json = {
-            "research_question": research_question,
-            "retrieved_content": [
+        # If no plan, create from user brief
+        if not all_research_questions:
+            all_research_questions = [
                 {
-                    "url": "https://example.com/placeholder",
-                    "title": "Placeholder Content",
-                    "content": f"This is placeholder content for: {research_question}"
+                    "id": "RQ1",
+                    "question": state.user_brief,
+                    "type": "exploratory"
                 }
             ]
+        
+        # Prepare comprehensive input JSON with all questions
+        input_json = {
+            "user_brief": state.user_brief,
+            "research_questions": all_research_questions,
+            "instructions": """
+CRITICAL DIRECTIVE: Provide comprehensive, high-quality answers for each research question.
+
+For EACH research question, provide:
+1. A clear, detailed answer (3-5 paragraphs, 300-500 words per question)
+2. Technical analysis explaining key principles and mechanisms
+3. Real-world examples (2-3) with specific use cases
+4. Key findings with supporting evidence
+5. Related concepts and interconnections
+6. Implementation guidance and best practices
+7. Common challenges and solutions
+8. Future trends and directions
+
+Focus on depth and accuracy over length.
+Target: 2000-4000 words total for all questions combined.
+Each answer should be informative and actionable.
+Every claim must be substantiated with reasoning or evidence.
+"""
         }
         
         # Build the full prompt
         prompt = f"{self.prompt_template}\n\n"
         prompt += f"## Input\n\n"
         prompt += f"```json\n{self.prompt_engine.inject_variables('{input}', {'input': input_json})}\n```\n\n"
-        prompt += f"## Your Response\n\n"
-        prompt += f"Provide your response as valid JSON only:"
+        prompt += f"""## Content Requirements
+
+**CRITICAL DIRECTIVE**: Provide comprehensive, accurate answers. Each research question requires:
+- Clear explanation (3-5 paragraphs, 300-500 words)
+- Technical analysis explaining key concepts and mechanisms
+- Real-world examples (2-3) with specific use cases
+- Implementation guidance: practical patterns and best practices
+- Common challenges with solutions
+- Future directions and emerging trends
+
+TARGET: 2000-4000 words total for all questions combined.
+Focus on clarity, accuracy, and practical value.
+Every claim must be substantiated with evidence or reasoning.
+Provide actionable insights that users can apply.
+
+## Your Response
+
+Provide your response as valid JSON only:"""
         
         return prompt
     

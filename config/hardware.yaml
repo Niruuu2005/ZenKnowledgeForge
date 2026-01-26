@@ -18,17 +18,19 @@ hardware:
     max_concurrent_models: 1
     # Force model unload after use
     ollama_keep_alive: 0
-    # Model swap timeout
-    model_swap_timeout_seconds: 30
+    # Model swap timeout (increased for larger context)
+    model_swap_timeout_seconds: 60
     # Max retries for model loading
     model_load_retries: 3
     
   performance:
     # Browser automation limits
-    max_concurrent_browser_tabs: 5
-    # Research timeout per question
-    research_timeout_seconds: 60
+    max_concurrent_browser_tabs: 8
+    # Research timeout per question (balanced for quality responses)
+    research_timeout_seconds: 1800
     # Embedding batch size
-    embedding_batch_size: 32
-    # Max context tokens (conservative for 6GB VRAM)
-    max_context_tokens: 4096
+    embedding_batch_size: 64
+    # Max context tokens (balanced for quality and speed)
+    max_context_tokens: 16384
+    # Max generation tokens per agent (realistic for 7B-14B models)
+    max_generation_tokens: 4096

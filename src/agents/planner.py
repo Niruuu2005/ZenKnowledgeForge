@@ -25,8 +25,8 @@ class PlannerAgent(BaseAgent):
         self,
         model_name: str = "mistral-nemo:12b-instruct-q4_K_M",
         vram_mb: int = 7500,
-        temperature: float = 0.4,
-        max_research_questions: int = 5
+        temperature: float = 0.5,
+        max_research_questions: int = 15
     ):
         """
         Initialize the Planner agent.

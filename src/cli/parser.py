@@ -100,6 +100,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Validate configuration and exit without execution"
     )
     
+    parser.add_argument(
+        "--single-model",
+        action="store_true",
+        help="Use a single model for all agents (interactive selection, faster)"
+    )
+    
+    parser.add_argument(
+        "--fast-mode",
+        action="store_true",
+        help="Fast mode: automatically use smallest model (phi3.5:3.8b) for all agents"
+    )
+    
     return parser
 
 
@@ -121,6 +133,13 @@ def validate_args(args: argparse.Namespace) -> bool:
     # Can't be both verbose and quiet
     if args.verbose and args.quiet:
         print("Error: Cannot use both --verbose and --quiet")
+        return False
+    
+    # Can't use both single-model and fast-mode
+    if args.single_model and args.fast_mode:
+        print("Error: Cannot use both --single-model and --fast-mode")
+        print("  --single-model: Interactive model selection")
+        print("  --fast-mode: Automatic small model (phi3.5:3.8b)")
         return False
     
     return True

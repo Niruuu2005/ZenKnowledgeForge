@@ -38,13 +38,15 @@ def setup_logging(
     
     # Console handler with Rich formatting
     if rich_formatting:
-        console = Console(stderr=True)
+        # Use UTF-8 encoding for console on Windows
+        console = Console(stderr=True, force_terminal=True)
         console_handler = RichHandler(
             console=console,
             rich_tracebacks=True,
             tracebacks_show_locals=True,
             show_time=True,
-            show_path=True
+            show_path=True,
+            markup=True
         )
     else:
         console_handler = logging.StreamHandler(sys.stderr)

@@ -15,16 +15,16 @@ agents:
     model: "mistral:7b-instruct"
     vram_mb: 4500
     role: "Decompose into research questions and create execution phases"
-    max_research_questions: 5
-    temperature: 0.4
+    max_research_questions: 15
+    temperature: 0.5
     
   grounder:
     name: "Grounder"
     model: "qwen2.5:7b-instruct-q4_K_M"
     vram_mb: 4500
     role: "RAG retrieval, evidence citation, confidence scoring"
-    temperature: 0.2
-    max_sources: 10
+    temperature: 0.25
+    max_sources: 30
     
   auditor:
     name: "Auditor"
@@ -45,9 +45,9 @@ agents:
     model: "qwen2.5:14b-instruct-q4_K_M"
     vram_mb: 9000
     role: "Final synthesis, conflict resolution, consensus scoring"
-    temperature: 0.2
-    consensus_threshold: 0.85
-    max_deliberation_rounds: 7
+    temperature: 0.25
+    consensus_threshold: 0.80
+    max_deliberation_rounds: 10
 
 # Pipeline Configurations
 pipelines:

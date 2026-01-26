@@ -29,6 +29,56 @@ from .renderers.markdown import MarkdownRenderer
 logger = logging.getLogger(__name__)
 
 
+def _run_preflight_checks(ui, config_loader) -> bool:
+    """
+    Run pre-flight checks to ensure system is ready.
+    
+    Args:
+        ui: Progress UI instance
+        config_loader: Configuration loader
+    
+    Returns:
+        True if all checks pass, False otherwise
+    """
+    import urllib.request
+    import urllib.error
+    
+    print("\n🔍 Running pre-flight checks...")
+    
+    # Check Ollama connectivity
+    ollama_url = config_loader.get_ollama_base_url()
+    
+    try:
+        req = urllib.request.Request(f"{ollama_url}/api/tags", method='GET')
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if response.status == 200:
+                print("  ✓ Ollama service is running")
+                
+                # Check if models are available
+                import json
+                data = json.loads(response.read())
+                
+                if 'models' in data and len(data['models']) > 0:
+                    print(f"  ✓ Found {len(data['models'])} models")
+                else:
+                    print("  ⚠ No models found - first run may be slow")
+                    print("    Tip: Run 'bash scripts/pull_models.sh' to download models")
+                
+                return True
+    except urllib.error.URLError as e:
+        print(f"  ✗ Cannot connect to Ollama at {ollama_url}")
+        print(f"    Error: {e.reason}")
+        print("\n  Fix:")
+        print("    1. Start Docker Desktop")
+        print("    2. Run: docker-compose up -d")
+        print("    3. Wait ~30 seconds for Ollama to start")
+        return False
+    except Exception as e:
+        print(f"  ✗ Unexpected error checking Ollama: {e}")
+        return False
+
+
+
 def main():
     """Main entry point for ZenKnowledgeForge CLI."""
     
@@ -84,6 +134,41 @@ def main():
             print("\n✓ Configuration valid")
             return 0
         
+        # Pre-flight checks
+        logger.info("Running pre-flight system checks...")
+        if not _run_preflight_checks(ui, config_loader):
+            ui.show_error("Pre-flight checks failed. Fix the issues above and try again.")
+            print("\nTip: Run diagnosis_script.py for detailed diagnostics")
+            print("Tip: Run scripts/start_services.ps1 to start Docker services")
+            return 1
+        
+        # Single model mode - interactive selection
+        single_model_name = None
+        if args.single_model:
+            from .cli.model_selector import select_model_interactive
+            
+            print("\n🚀 SINGLE MODEL MODE - Faster execution, no model swapping")
+            print("   All agents will use the same model.")
+            print()
+            
+            single_model_name = select_model_interactive(config_loader.get_ollama_base_url())
+            
+            if not single_model_name:
+                print("\n❌ No model selected. Exiting.")
+                return 1
+            
+            print(f"\n✓ Using {single_model_name} for all agents")
+            print("   Expected execution time: 8-12 minutes (vs 15-25 with swapping)\n")
+        
+        # Fast mode - automatically use smallest model
+        elif args.fast_mode:
+            single_model_name = "phi3.5:3.8b-mini-instruct-q4_K_M"
+            
+            print("\n⚡ FAST MODE - Using smallest model for maximum speed")
+            print(f"   Model: {single_model_name}")
+            print("   Expected execution time: 6-10 minutes")
+            print("   Quality: Good for most queries\n")
+        
         # Get user brief
         if args.interactive:
             interactive = InteractiveMode(use_rich=not args.no_rich)
@@ -113,13 +198,25 @@ def main():
             # Register agents
             logger.info("Registering agents...")
             
+            # Determine VRAM estimate for single model mode
+            if single_model_name:
+                # Use a conservative estimate based on model name
+                if "14b" in single_model_name or "13b" in single_model_name:
+                    single_model_vram = 9000
+                elif "9b" in single_model_name or "8b" in single_model_name:
+                    single_model_vram = 5500
+                elif "7b" in single_model_name:
+                    single_model_vram = 4500
+                else:
+                    single_model_vram = 3000
+            
             # Create and register each agent
             interpreter_cfg = agents_config.agents["interpreter"]
             engine.register_agent(
                 "interpreter",
                 InterpreterAgent(
-                    model_name=interpreter_cfg.model,
-                    vram_mb=interpreter_cfg.vram_mb,
+                    model_name=single_model_name or interpreter_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else interpreter_cfg.vram_mb,
                     temperature=interpreter_cfg.temperature,
                     max_questions=interpreter_cfg.max_questions or 5
                 )
@@ -129,8 +226,8 @@ def main():
             engine.register_agent(
                 "planner",
                 PlannerAgent(
-                    model_name=planner_cfg.model,
-                    vram_mb=planner_cfg.vram_mb,
+                    model_name=single_model_name or planner_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else planner_cfg.vram_mb,
                     temperature=planner_cfg.temperature,
                     max_research_questions=planner_cfg.max_research_questions or 5
                 )
@@ -140,8 +237,8 @@ def main():
             engine.register_agent(
                 "grounder",
                 GrounderAgent(
-                    model_name=grounder_cfg.model,
-                    vram_mb=grounder_cfg.vram_mb,
+                    model_name=single_model_name or grounder_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else grounder_cfg.vram_mb,
                     temperature=grounder_cfg.temperature,
                     max_sources=grounder_cfg.max_sources or 10
                 )
@@ -151,8 +248,8 @@ def main():
             engine.register_agent(
                 "auditor",
                 AuditorAgent(
-                    model_name=auditor_cfg.model,
-                    vram_mb=auditor_cfg.vram_mb,
+                    model_name=single_model_name or auditor_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else auditor_cfg.vram_mb,
                     temperature=auditor_cfg.temperature
                 )
             )
@@ -161,8 +258,8 @@ def main():
             engine.register_agent(
                 "visualizer",
                 VisualizerAgent(
-                    model_name=visualizer_cfg.model,
-                    vram_mb=visualizer_cfg.vram_mb,
+                    model_name=single_model_name or visualizer_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else visualizer_cfg.vram_mb,
                     temperature=visualizer_cfg.temperature
                 )
             )
@@ -171,8 +268,8 @@ def main():
             engine.register_agent(
                 "judge",
                 JudgeAgent(
-                    model_name=judge_cfg.model,
-                    vram_mb=judge_cfg.vram_mb,
+                    model_name=single_model_name or judge_cfg.model,
+                    vram_mb=single_model_vram if single_model_name else judge_cfg.vram_mb,
                     temperature=judge_cfg.temperature,
                     consensus_threshold=judge_cfg.consensus_threshold or 0.85,
                     max_deliberation_rounds=judge_cfg.max_deliberation_rounds or 7
@@ -229,12 +326,41 @@ def main():
                 filename = f"{args.mode}_{timestamp}.md"
                 output_path = output_dir / filename
             
-            # Render and save
-            content = renderer.render(
-                artifact=final_artifact,
-                mode=args.mode,
-                output_path=output_path
-            )
+            # Try rendering with template, fallback to raw JSON if fails
+            try:
+                content = renderer.render(
+                    artifact=final_artifact,
+                    mode=args.mode,
+                    output_path=output_path
+                )
+            except Exception as render_error:
+                logger.warning(f"Template rendering failed: {render_error}")
+                logger.info("Falling back to raw artifact save...")
+                
+                # Save raw artifact as JSON
+                import json
+                json_path = Path(output_path).with_suffix('.json')
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(final_artifact, f, indent=2, default=str)
+                
+                # Also create a simple markdown version
+                simple_md = f"""# ZenKnowledgeForge Research Output
+
+**Generated:** {datetime.now().isoformat()}
+**Mode:** {args.mode}
+
+## Summary
+
+{final_artifact.get('synthesis', {}).get('executive_summary', 'No summary available.')}
+
+## Raw Output
+
+See: {json_path}
+"""
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(simple_md)
+                
+                ui.show_warning(f"Template failed - Raw output saved to: {json_path}")
             
             # Show success
             ui.show_final_artifact(final_artifact, str(output_path))

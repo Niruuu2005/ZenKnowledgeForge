@@ -50,7 +50,7 @@ class PromptEngine:
     @staticmethod
     def extract_json_from_response(response: str) -> Optional[Dict[str, Any]]:
         """
-        Extract JSON from an LLM response that may contain markdown or other text.
+        Extract JSON from an LLM response with robust error handling and repair.
         
         Args:
             response: Raw LLM response
@@ -58,34 +58,57 @@ class PromptEngine:
         Returns:
             Parsed JSON dictionary or None if parsing fails
         """
-        # Try to find JSON in markdown code blocks
+        # Helper to try parsing
+        def try_parse(text: str) -> Optional[Dict[str, Any]]:
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return None
+        
+        # 1. Try extracting from markdown blocks first (most reliable)
         json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
         matches = re.findall(json_pattern, response, re.DOTALL)
-        
         if matches:
-            try:
-                return json.loads(matches[0])
-            except json.JSONDecodeError:
-                pass
-        
-        # Try to parse the entire response as JSON
-        try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            pass
-        
-        # Try to find JSON object in the text
-        try:
-            # Find the first { and last }
-            start = response.find('{')
-            end = response.rfind('}')
+            parsed = try_parse(matches[0])
+            if parsed: return parsed
+
+        # 2. Try simple extraction of outer braces
+        start = response.find('{')
+        end = response.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            json_candidate = response[start:end+1]
+            parsed = try_parse(json_candidate)
+            if parsed: return parsed
             
-            if start != -1 and end != -1 and end > start:
-                json_str = response[start:end+1]
-                return json.loads(json_str)
-        except (json.JSONDecodeError, ValueError):
-            pass
-        
+            # 3. Simple repair: Fix common issues
+            # Remove control characters
+            repaired = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_candidate)
+            # Fix trailing commas
+            repaired = re.sub(r',(\s*[}\]])', r'\1', repaired)
+            
+            parsed = try_parse(repaired)
+            if parsed: return parsed
+            
+            # 4. Aggressive repair for unescaped quotes (common in long text)
+            # This is complex but handles "content": "text with "quotes" inside"
+            try:
+                # Basic strategy: If we fail, try to escape inner quotes
+                # This is a heuristic and may not work for all cases
+                def escape_inner_quotes(match):
+                    content = match.group(1)
+                    # Don't escape already escaped quotes
+                    content = re.sub(r'(?<!\\)"', r'\"', content)
+                    return f': "{content}"'
+                
+                # Look for key-value pairs where value is a string
+                # This regex is fragile but helps in many cases
+                aggressive_repair = re.sub(r':\s*"(.*?)"(?=\s*[,}])', escape_inner_quotes, json_candidate, flags=re.DOTALL)
+                parsed = try_parse(aggressive_repair)
+                if parsed: return parsed
+            except Exception:
+                pass
+
+        # 5. Last resort: Return None if all recovery attempts fail
         return None
 
 
@@ -199,7 +222,17 @@ class BaseAgent(ABC):
                     logger.error("  Check: Are models downloaded? → bash scripts/pull_models.sh")
                 
                 if attempt == self.max_retries - 1:
-                    raise
+                    # On final failure, use graceful degradation instead of raising
+                    logger.warning(
+                        f"{self.name} using graceful degradation after all retries failed"
+                    )
+                    return self._graceful_degradation(state)
+                
+                # Wait before retry
+                import time
+                wait_time = 2 ** attempt  # Exponential backoff
+                logger.info(f"Waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
         
         # If all retries failed, return a graceful degradation
         logger.error(f"{self.name} failed after {self.max_retries} attempts")

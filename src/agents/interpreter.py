@@ -102,12 +102,16 @@ class InterpreterAgent(BaseAgent):
             return None
         
         # Validate required fields
-        required_fields = ["intent", "extracted_requirements", "confidence"]
+        required_fields = ["intent", "extracted_requirements"]
         
         for field in required_fields:
             if field not in parsed:
                 logger.warning(f"Missing required field in Interpreter output: {field}")
                 return None
+        
+        # Add default confidence if missing
+        if "confidence" not in parsed:
+            parsed["confidence"] = 0.7  # Default moderate confidence
         
         # Limit number of clarifying questions
         if "clarifying_questions" in parsed:
@@ -125,11 +129,18 @@ class InterpreterAgent(BaseAgent):
         Returns:
             Minimal valid output
         """
+        # Handle execution_mode being either string or enum
+        mode_value = (
+            state.execution_mode.value 
+            if hasattr(state.execution_mode, 'value') 
+            else str(state.execution_mode)
+        )
+        
         return {
             "intent": {
                 "primary_goal": state.user_brief,
                 "domain": "unknown",
-                "output_type": state.execution_mode.value,
+                "output_type": mode_value,
                 "scope": "moderate"
             },
             "extracted_requirements": [state.user_brief],

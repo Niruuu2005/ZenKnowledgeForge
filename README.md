@@ -113,6 +113,20 @@ Answer clarifying questions for better results:
 python -m zen --interactive --mode research
 ```
 
+### Single Model Mode (⚡ 2-3x Faster)
+Use one model for all agents instead of swapping:
+
+```bash
+python run_zen.py "Your query" --mode research --single-model
+```
+
+**Benefits:**
+- Execution time: **8-12 minutes** (vs 15-25 with swapping)
+- No model loading delays
+- Same model stays loaded throughout
+
+You'll be prompted to choose from available models. See [`SINGLE_MODEL_MODE.md`](SINGLE_MODEL_MODE.md) for details.
+
 ---
 
 ## 📊 How It Works

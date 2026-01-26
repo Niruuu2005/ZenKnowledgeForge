@@ -3,13 +3,15 @@ Pipeline Engine - Main execution loop for agent orchestration.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Callable
 from pathlib import Path
 import uuid
+from datetime import datetime
 
 from .config import ConfigLoader
 from .model_manager import ModelManager
 from .state import SharedState, ExecutionMode
+from .progress_tracker import ProgressTracker
 
 
 logger = logging.getLogger(__name__)
@@ -128,10 +130,19 @@ class PipelineEngine:
         agent_names = self.get_pipeline_steps(mode)
         logger.info(f"Pipeline steps: {' -> '.join(agent_names)}")
         
+        # Initialize progress tracker
+        progress_tracker = ProgressTracker(
+            total_agents=len(agent_names),
+            agent_names=agent_names
+        )
+        
         # Execute each agent in sequence
         for agent_name in agent_names:
             try:
                 logger.info(f"Executing agent: {agent_name}")
+                
+                # Start progress tracking
+                progress_tracker.start_agent(agent_name)
                 
                 # Get agent instance
                 if agent_name not in self._agent_registry:
@@ -139,14 +150,17 @@ class PipelineEngine:
                 
                 agent = self._agent_registry[agent_name]
                 
+                # Update status
+                progress_tracker.update_status("Thinking...")
+                
                 # Execute agent
                 agent_output = agent.think(state, self.model_manager)
                 
-                # Validate agent output
-                if agent_output is None or (isinstance(agent_output, dict) and len(agent_output) == 0):
+                # Validate output quality
+                if not self._validate_agent_output(agent_name, agent_output):
                     logger.warning(
-                        f"Agent {agent_name} produced empty output. "
-                        f"This may cause issues for downstream agents."
+                        f"Agent {agent_name} produced low-quality output, "
+                        f"but continuing pipeline"
                     )
                 
                 # Update state with agent output
@@ -156,6 +170,9 @@ class PipelineEngine:
                 self._update_state_from_agent(state, agent_name, agent_output)
                 
                 logger.info(f"Agent {agent_name} completed successfully")
+                
+                # Complete progress tracking
+                progress_tracker.complete_agent(agent_name)
                 
             except Exception as e:
                 error_msg = f"Error in agent {agent_name}: {str(e)}"
@@ -167,11 +184,23 @@ class PipelineEngine:
                 continue
         
         # Mark completion
-        from datetime import datetime
         state.completed_at = datetime.now()
         
         logger.info(f"Pipeline execution completed: session={session_id}")
         
+        # Generate and print timing report
+        timing_report = progress_tracker.generate_report()
+        print(timing_report)
+        logger.info("Pipeline execution completed")
+        
+        # Save timing report to file
+        report_file = Path("logs") / f"timing_{session_id}.txt"
+        report_file.parent.mkdir(exist_ok=True)
+        with open(report_file, 'w') as f:
+            f.write(timing_report)
+        logger.info(f"Timing report saved to: {report_file}")
+        
+        # Return final state
         return state
     
     def _update_state_from_agent(
@@ -229,6 +258,53 @@ class PipelineEngine:
                         f"Judge requested revision but max rounds reached "
                         f"({state.deliberation_round}/{state.max_deliberation_rounds})"
                     )
+    
+    def _validate_agent_output(
+        self,
+        agent_name: str,
+        output: Dict[str, Any]
+    ) -> bool:
+        """
+        Validate that agent output meets minimum quality standards.
+        
+        Args:
+            agent_name: Name of the agent
+            output: Agent's output dictionary
+        
+        Returns:
+            True if output is valid, False otherwise
+        """
+        if not output:
+            logger.error(f"{agent_name} produced empty output")
+            return False
+        
+        # Check for degraded flag
+        if output.get("degraded", False):
+            logger.warning(f"{agent_name} output is degraded")
+            return False
+        
+        # Agent-specific validation
+        if agent_name == "grounder":
+            # Check for actual content in answers
+            answer = output.get("answer", {})
+            if not answer or len(str(answer)) < 100:
+                logger.warning(f"Grounder produced insufficient content")
+                return False
+        
+        elif agent_name == "judge":
+            # Check for final artifact
+            final_artifact = output.get("final_artifact")
+            if not final_artifact:
+                logger.warning(f"Judge did not produce final artifact")
+                return False
+            
+            # Check for sections
+            sections = final_artifact.get("sections", [])
+            if len(sections) < 3:
+                logger.warning(f"Judge produced too few sections ({len(sections)})")
+                return False
+        
+        return True
     
     def cleanup(self):
         """Cleanup resources."""

@@ -160,7 +160,7 @@ class JudgeAgent(BaseAgent):
                 "justification": "Degraded mode - unable to perform full synthesis"
             },
             "final_artifact": {
-                "type": state.execution_mode.value,
+                "type": state.execution_mode.value if hasattr(state.execution_mode, 'value') else str(state.execution_mode),
                 "sections": sections,
                 "metadata": {
                     "created_at": state.started_at.isoformat(),
