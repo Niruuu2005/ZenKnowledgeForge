@@ -35,6 +35,9 @@ class SharedState(BaseModel):
     # Plan (from planner)
     plan: Optional[Dict[str, Any]] = None
     
+    # Evidence (retrieved by grounder for research questions)
+    evidence: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
+    
     # Research findings (from grounder)
     research_findings: List[Dict[str, Any]] = Field(default_factory=list)
     
