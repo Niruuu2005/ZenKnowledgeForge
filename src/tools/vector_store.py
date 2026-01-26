@@ -8,9 +8,16 @@ enabling semantic search across retrieved documents.
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-import chromadb
-from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+
+# Lazy imports to avoid dependency errors during module load
+try:
+    import chromadb
+    from chromadb.config import Settings
+    from sentence_transformers import SentenceTransformer
+    CHROMADB_AVAILABLE = True
+except ImportError as e:
+    CHROMADB_AVAILABLE = False
+    _import_error = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +46,16 @@ class VectorStore:
             persist_dir: Directory for persistent storage
             collection_name: Name of the ChromaDB collection
             embedding_model: SentenceTransformer model for embeddings
+            
+        Raises:
+            ImportError: If chromadb or sentence-transformers not installed
         """
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                f"ChromaDB dependencies not available: {_import_error}\n"
+                "Install with: pip install chromadb sentence-transformers"
+            )
+        
         self.persist_dir = Path(persist_dir)
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         
